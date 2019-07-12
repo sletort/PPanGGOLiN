@@ -283,6 +283,7 @@ int nem(const char* Fname,
         strncat( name_out_stderr , ".stderr", LEN_FILENAME ) ;
         out_stderr = fopen(name_out_stderr, "w");
     }
+    setbuf(out_stderr, NULL);
 
     fprintf( out_stderr , " * * * NEM (spatial data clustering) v%s * * *\n" ,
              NemVersionStrC ) ;

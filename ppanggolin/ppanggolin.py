@@ -696,7 +696,7 @@ class PPanGGOLiN:
                 for i, element in enumerate(seed_path):
                     
                         if element in separation_tree:
-                            print(element)
+                            #print(element)
                             for child in separation_tree[element]:
                                 new_seed_path = list(seed_path)
                                 new_seed_path[i]=child
@@ -717,7 +717,7 @@ class PPanGGOLiN:
                             #absolute_orientation(path)# give an absolute orientation
                             all_path_k_p_1.add(absolute_orientation(path))
                     except nx.exception.NetworkXError as e:
-                        print(path)
+                        #print(path)
                         all_path_k.extendleft(update_seed_path(p))
                         continue
             return(all_path_k_p_1)
@@ -1085,13 +1085,13 @@ class PPanGGOLiN:
                         nei_file.write(str(index_fam[node_name])+"\t0\n")
                         logging.getLogger().debug("The family: "+node_name+" has a too high degree or is an isolated family in the selected organisms")
                 except nx.exception.NetworkXError as nxe:
-                    print(nxe)
+                    #print(nxe)
                     logging.getLogger().debug("The family: "+node_name+" is an isolated family")
                     nei_file.write(str(index_fam[node_name])+"\t0\n")
             str_file.write("S\t"+str(len(index_fam))+"\t"+
                             str(len(select_organisms))+"\n")
                                 
-        return(total_edges_weight,len(index_fam))
+        return(total_edges_weight/2,len(index_fam))
 
     def __evaluate_nb_partitions(self, nem_dir_path = tempfile.mkdtemp(),
                                  old_nem_dir        = None,
@@ -1490,7 +1490,7 @@ class PPanGGOLiN:
             Q, edges_weight, BICs, ICLs, LLs  = run_evaluate_nb_partitions(select_organisms,Q)
             if inplace:
                 logging.getLogger().info("Partitioning...")
-
+            #print("info, beta="+str(beta)+" F="+str((stats["exact_accessory"]+stats["exact_core"]))+" edges_weight="+str(edges_weight))
             partitionning_results = run_partitioning(nem_dir_path, len(select_organisms), beta * ((stats["exact_accessory"]+stats["exact_core"])/edges_weight), free_dispersion, Q = Q, seed = seed, init = init)# 
             cpt+=1
             logging.getLogger().info(f"Partitionned {len(select_organisms)} genomes in {round(time() - start_partitionning,2)} seconds.")
@@ -2620,6 +2620,7 @@ def run_partitioning(nem_dir_path, nb_org, beta, free_dispersion, Q = 3, seed = 
         nem_dir_path.encode('ascii')+b"/nem_file_init_"+str(Q).encode('ascii')+b".m",
         nem_dir_path.encode('ascii')+b"/nem_file_"+str(Q).encode('ascii'),
         seed])
+    #print("beta="+str(beta))
     nem(Fname           = nem_dir_path.encode('ascii')+b"/nem_file",
         nk              = Q,
         algo            = ALGO,
