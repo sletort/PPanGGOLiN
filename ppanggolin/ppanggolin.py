@@ -2235,7 +2235,7 @@ class PPanGGOLiN:
         """
             generate tile plot representation
             :param outdir: a str containing the path of the output file
-            :param outdir: a bool specifying if only the persistent and shell genome is plotted or all the pangenome
+            :param shell_persistent_only: a bool specifying if only the persistent and shell genome is plotted or all the pangenome
             :type str: 
         """ 
         data        = []
@@ -2269,6 +2269,7 @@ class PPanGGOLiN:
         ordored_nodes_c = sorted(self.partitions["cloud"], key=lambda n:len(graph.nodes[n]), reverse=True)
         sep_p = len(ordored_nodes_p)-0.5
         separators = [sep_p]
+        shell_NA = None
         if len(self.subpartitions_shell)==1:
             ordored_nodes_s = sorted(self.partitions["shell"], key=lambda n:len(graph.nodes[n]), reverse=True)
             ordered_nodes = ordored_nodes_p+ordored_nodes_s+ordored_nodes_c
@@ -2277,7 +2278,8 @@ class PPanGGOLiN:
         else:
             ordered_nodes = ordored_nodes_p
             for subpartition in sorted(self.subpartitions_shell.keys()):
-
+                if subpartition=="S_":
+                    shell_NA=len(separators)-1
                 ordored_nodes_s = sorted(self.subpartitions_shell[subpartition], key=lambda n:len(graph.nodes[n]), reverse=True)
                 ordered_nodes+= ordored_nodes_s
                 separators.append(separators[len(separators)-1]+len(ordored_nodes_s))
@@ -2313,7 +2315,10 @@ class PPanGGOLiN:
                                                    ticks     = 'outside'))
         shell_color=None
         if len(self.subpartitions_shell)>1:
-            shell_color = cl.interp(cl.flipper()['seq']['9']['Greens'][1:7],self.Q-2)
+            if "S_" not in self.subpartitions_shell:
+                shell_color = cl.interp(cl.flipper()['seq']['9']['Greens'][1:7],len(self.subpartitions_shell))
+            else:
+                shell_color = cl.interp(cl.flipper()['seq']['9']['Greens'][1:7],len(self.subpartitions_shell)-1)
         shapes = []
         sep_prec=0
         for nb, sep in enumerate(separators):
@@ -2323,7 +2328,10 @@ class PPanGGOLiN:
             elif nb==(len(separators)-1):
                 color=COLORS["cloud"]
             elif len(self.subpartitions_shell)>1:
-                color=shell_color[nb-1]
+                if shell_NA is not None and nb==shell_NA:
+                    color=COLORS["shell"]
+                else:
+                    color=shell_color.pop()
             else:
                 color=COLORS["shell"]
             shapes.append(dict(type='line', x0=-1, x1=-1, y0=sep_prec, y1=sep, line = dict(dict(width=10, color=color))))
