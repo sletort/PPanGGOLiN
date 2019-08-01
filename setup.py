@@ -9,12 +9,6 @@ import subprocess
 from distutils.command.install import install
 from distutils.command.build import build
 from distutils.command.clean import clean
-try:
-    from Cython.Build import cythonize
-except ImportError as e:
-    print(e)
-    print('please install Cython ("pip install cython") before installing ppanggolin')
-    exit(1)
 
 name = find_packages().pop()
 NEM_dir_path = name+"/NEM/"
@@ -51,8 +45,9 @@ if __name__ == "__main__":
             'console_scripts': [
             name+' = '+name+'.command_line:__main__'
           ]},
-        install_requires= ['cython', 'ordered-set', 'bidict', 'networkx >= 2.0' , 'tqdm', 'ascii_graph','plotly','scipy','numpy','pandas','fa2','futures;python_version=="2.7"','markov_clustering', 'colorlover'],
-        ext_modules = cythonize([Extension(name = "nem_stats",sources =[NEM_dir_path+'nem_stats.pyx',
+        setup_requires = ['cython'],
+        install_requires= ['chart-studio', 'ordered-set', 'bidict', 'networkx >= 2.0' , 'tqdm', 'ascii_graph','scipy','numpy','pandas','fa2','markov_clustering', 'colorlover'],
+        ext_modules = [Extension(name = "nem_stats",sources =[NEM_dir_path+'nem_stats.pyx',
                                                                         NEM_dir_path+'nem_exe.c',
                                                                         NEM_dir_path+'nem_alg.c',
                                                                         NEM_dir_path+'nem_nei.c',
@@ -61,4 +56,5 @@ if __name__ == "__main__":
                                                                         NEM_dir_path+'lib_io.c',
                                                                         NEM_dir_path+'nem_hlp.c',
                                                                         NEM_dir_path+'genmemo.c'],
-                                                              include_dirs=[NEM_dir_path])]))
+                                                              include_dirs=[NEM_dir_path])]
+)

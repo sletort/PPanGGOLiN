@@ -26,7 +26,7 @@ from nem_stats import *
 from .utils import *
 import pdb
 from fa2 import ForceAtlas2
-import plotly.plotly as py
+import chart_studio.plotly as py
 import plotly.offline as out_plotly
 import plotly.graph_objs as go
 #import plotly.figure_factory as ff
