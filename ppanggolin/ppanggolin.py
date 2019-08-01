@@ -238,7 +238,7 @@ class PPanGGOLiN:
                 logging.getLogger().error("No tabulation separator found in gene families file")
                 exit(1)
             (fam_id, gene_id, is_frag) = elements if len(elements) == 3 else elements+[None]
-            families[gene_id]          = fam_id
+            families[gene_id]          = sys.intern(fam_id)
             if is_frag == "F":
                 self.CDS_fragments[gene_id] = fam_id
 
