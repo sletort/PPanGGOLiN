@@ -792,63 +792,71 @@ def __main__():
         # print(cpt_partition)
         #-------------
         #-------------
-        logging.getLogger().info("Extract and label paths")
-        start_paths = time()
-        correlated_path_groups, correlated_paths = pan.extract_shell_paths()
+
+
+        ####### BEGIN PATHS
+        
+        # logging.getLogger().info("Extract and label paths")
+        # start_paths = time()
+        # correlated_path_groups, correlated_paths = pan.extract_shell_paths()
         
 
-        with open(OUTPUTDIR+"/"+PATH_DIR+"/"+CORRELATED_PATHS_PREFIX+"_vectors.csv","w") as correlated_paths_vectors, open(OUTPUTDIR+"/"+PATH_DIR+"/"+CORRELATED_PATHS_PREFIX+"_confidences.csv","w") as correlated_paths_confidences:
-            header = []
-            for i, (path, vector) in enumerate(correlated_paths.items()):
-                if i==0:
-                    header = list(pan.organisms)
-                    correlated_paths_vectors.write(",".join(["Gene","Non-unique Gene name","Annotation","No. isolates","No. sequences","Avg sequences per isolate","Accessory Fragment","Genome Fragment","Order within Fragment","Accessory Order with Fragment","QC","Min group size nuc","Max group size nuc","Avg group size nuc"]+header)+"\n")
-                    correlated_paths_confidences.write(",".join(["correlated_paths"]+header)+"\n")
-                binary_vector = [int(round(v)) for v in vector]
-                correlated_paths_vectors.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in binary_vector])+("\n" if i < len(correlated_paths)-1 else ""))
-                correlated_paths_confidences.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in vector])+("\n" if i < len(correlated_paths)-1 else ""))
+        # with open(OUTPUTDIR+"/"+PATH_DIR+"/"+CORRELATED_PATHS_PREFIX+"_vectors.csv","w") as correlated_paths_vectors, open(OUTPUTDIR+"/"+PATH_DIR+"/"+CORRELATED_PATHS_PREFIX+"_confidences.csv","w") as correlated_paths_confidences:
+        #     header = []
+        #     for i, (path, vector) in enumerate(correlated_paths.items()):
+        #         if i==0:
+        #             header = list(pan.organisms)
+        #             correlated_paths_vectors.write(",".join(["Gene","Non-unique Gene name","Annotation","No. isolates","No. sequences","Avg sequences per isolate","Accessory Fragment","Genome Fragment","Order within Fragment","Accessory Order with Fragment","QC","Min group size nuc","Max group size nuc","Avg group size nuc"]+header)+"\n")
+        #             correlated_paths_confidences.write(",".join(["correlated_paths"]+header)+"\n")
+        #         binary_vector = [int(round(v)) for v in vector]
+        #         correlated_paths_vectors.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in binary_vector])+("\n" if i < len(correlated_paths)-1 else ""))
+        #         correlated_paths_confidences.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in vector])+("\n" if i < len(correlated_paths)-1 else ""))
 
-        if options.metadata[0]:
-            for col in tqdm(metadata.columns,total=metadata.shape[1], unit = "variable"):
-                results=None
-                if not numpy.issubdtype(metadata[col].dtype, numpy.number):
-                    possible_values_index = {v:i for i,v in enumerate(list(set(metadata[col].dropna())))}
-                    results = pandas.DataFrame(index = correlated_paths.keys(),columns=["cramer_phi","chi2_pvalue","bonferroni_chi2_pvalue"]+["sensitivity_"+v for v in possible_values_index.keys()]+["specifity_"+v for v in possible_values_index.keys()]+["F1score_"+v for v in possible_values_index.keys()])
-                    for path, path_vector in correlated_paths.items():
-                        ctg_table = pandas.crosstab(pandas.Series([round(val,0) for val in path_vector],index=metadata.index),metadata[col])
-                        chi2_pvalue, cramerphi = cramers_corrected_stat(ctg_table.values)
-                        results.loc[path,"cramer_phi"]  = round(cramerphi,2)
-                        results.loc[path,"chi2_pvalue"] = chi2_pvalue
-                        results.loc[path,"bonferroni_chi2_pvalue"]  = chi2_pvalue/len(correlated_paths)
+        # if options.metadata[0]:
+        #     for col in tqdm(metadata.columns,total=metadata.shape[1], unit = "variable"):
+        #         results=None
+        #         if not numpy.issubdtype(metadata[col].dtype, numpy.number):
+        #             possible_values_index = {v:i for i,v in enumerate(list(set(metadata[col].dropna())))}
+        #             results = pandas.DataFrame(index = correlated_paths.keys(),columns=["cramer_phi","chi2_pvalue","bonferroni_chi2_pvalue"]+["sensitivity_"+v for v in possible_values_index.keys()]+["specifity_"+v for v in possible_values_index.keys()]+["F1score_"+v for v in possible_values_index.keys()])
+        #             for path, path_vector in correlated_paths.items():
+        #                 ctg_table = pandas.crosstab(pandas.Series([round(val,0) for val in path_vector],index=metadata.index),metadata[col])
+        #                 chi2_pvalue, cramerphi = cramers_corrected_stat(ctg_table.values)
+        #                 results.loc[path,"cramer_phi"]  = round(cramerphi,2)
+        #                 results.loc[path,"chi2_pvalue"] = chi2_pvalue
+        #                 results.loc[path,"bonferroni_chi2_pvalue"]  = chi2_pvalue/len(correlated_paths)
 
-                    for value in list(possible_values_index.keys()):
-                        value_vector = (metadata[col] == value)
-                        value_vector[metadata[col].isna()]=numpy.nan
-                        for path, path_vector in correlated_paths.items():
-                            #res   = kendalltau(value_vector.values,path_vector.round(0), nan_policy="omit")
+        #             for value in list(possible_values_index.keys()):
+        #                 value_vector = (metadata[col] == value)
+        #                 value_vector[metadata[col].isna()]=numpy.nan
+        #                 for path, path_vector in correlated_paths.items():
+        #                     #res   = kendalltau(value_vector.values,path_vector.round(0), nan_policy="omit")
 
-                            pres_abs_vector = path_vector.round(0)[~numpy.isnan(value_vector)]
-                            value_vector    = value_vector[~numpy.isnan(value_vector)]
-                            true_positive  = Counter((value_vector == pres_abs_vector) & (pres_abs_vector == 1))[True]
-                            false_positive = Counter((value_vector == pres_abs_vector) & (pres_abs_vector == 0))[True]
-                            true_negative  = Counter((value_vector != pres_abs_vector) & (pres_abs_vector == 1))[True]
-                            false_negative = Counter((value_vector != pres_abs_vector) & (pres_abs_vector == 0))[True]
-                            results.loc[path,"sensitivity_"+value] = round(true_positive/(true_positive+false_positive),2)
-                            results.loc[path,"specifity_"+value] = round(true_negative/(false_negative+true_negative),2)
-                            results.loc[path,"F1score_"+value] = (2 * true_positive)/(2 * true_positive+false_positive+false_negative)
-                    results.sort_values(by="cramer_phi",axis=0,ascending=False, inplace = True)
-                else:
-                    results = pandas.DataFrame(index = correlated_paths.keys(),columns=["spearman_r"])
-                    for path, path_vector in correlated_paths.items():
-                        res_spearman = spearmanr(metadata[col].values,path_vector.round(0), nan_policy="omit")
-                        results.loc[path,"spearman_r"] = round(res_spearman[0],3)
-                        results.loc[path,"pvalue"] = res_spearman[1]
-                    results.sort_values(by="spearman_r",axis=0,ascending=False, inplace = True)
+        #                     pres_abs_vector = path_vector.round(0)[~numpy.isnan(value_vector)]
+        #                     value_vector    = value_vector[~numpy.isnan(value_vector)]
+        #                     true_positive  = Counter((value_vector == pres_abs_vector) & (pres_abs_vector == 1))[True]
+        #                     false_positive = Counter((value_vector == pres_abs_vector) & (pres_abs_vector == 0))[True]
+        #                     true_negative  = Counter((value_vector != pres_abs_vector) & (pres_abs_vector == 1))[True]
+        #                     false_negative = Counter((value_vector != pres_abs_vector) & (pres_abs_vector == 0))[True]
+        #                     results.loc[path,"sensitivity_"+value] = round(true_positive/(true_positive+false_positive),2)
+        #                     results.loc[path,"specifity_"+value] = round(true_negative/(false_negative+true_negative),2)
+        #                     results.loc[path,"F1score_"+value] = (2 * true_positive)/(2 * true_positive+false_positive+false_negative)
+        #             results.sort_values(by="cramer_phi",axis=0,ascending=False, inplace = True)
+        #         else:
+        #             results = pandas.DataFrame(index = correlated_paths.keys(),columns=["spearman_r"])
+        #             for path, path_vector in correlated_paths.items():
+        #                 res_spearman = spearmanr(metadata[col].values,path_vector.round(0), nan_policy="omit")
+        #                 results.loc[path,"spearman_r"] = round(res_spearman[0],3)
+        #                 results.loc[path,"pvalue"] = res_spearman[1]
+        #             results.sort_values(by="spearman_r",axis=0,ascending=False, inplace = True)
 
-                #results = results.reindex_axis(results.min(axis=1).sort_values(ascending=False).index, axis=0)
-                results.to_csv(OUTPUTDIR+METADATA_DIR+"/results_"+str(col))
-        end_paths = time()
-        time_report+= "Execution time of path detection and labelling: """ +str(round(end_paths-start_paths, 2))+" s\n"
+        #         #results = results.reindex_axis(results.min(axis=1).sort_values(ascending=False).index, axis=0)
+        #         results.to_csv(OUTPUTDIR+METADATA_DIR+"/results_"+str(col))
+        # end_paths = time()
+        # time_report+= "Execution time of path detection and labelling: """ +str(round(end_paths-start_paths, 2))+" s\n"
+
+        ########## END PATHS
+
+
         if options.compute_layout:
             logging.getLogger().info("Computing layout")
             start_layout = time()
