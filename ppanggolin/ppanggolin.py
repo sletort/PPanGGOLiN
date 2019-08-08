@@ -39,7 +39,7 @@ import markov_clustering as mc
 import io
 from contextlib import redirect_stdout
 import colorlover as cl
-
+from sklearn.cluster import *
 import glob
 
 (TYPE, FAMILY, START, END, STRAND, NAME, PRODUCT) = range(0, 7)#data index in annotation
@@ -183,7 +183,7 @@ class PPanGGOLiN:
         self.free_dispersion                = None
         self.th_degree                      = None
         self.chunk_size                     = None
-        self.subpartitions_shell             = defaultdict(list)
+        self.subpartitions_shell            = defaultdict(list)
         self.partition_parameters           = {}
         self.CDS_fragments                  = {}
         self.soft_core_th                   = None
@@ -218,14 +218,14 @@ class PPanGGOLiN:
             :param lim_occurence: a int containing the threshold of the maximum number copy of each families. Families exceeding this threshold are removed and are listed in the families_repeted attribute.
             :param add_rna_to_the_pangenome: a bool specifying if the rna genes must be added to the pangenome or not.
             :param infer_singletons: a bool specifying if singleton must be explicitely present in the families_tsv_file (False) or if single gene in gff files must be automatically infered as a singleton family (True)
-            :type file: 
-            :type file: 
-            :type int: 
-            :type bool: 
+            :type file:
+            :type file:
+            :type int:
+            :type bool:
             :type int:
             :type bool: 
             :type bool: 
-        """ 
+        """
         self.directed = directed
         logging.getLogger().info("Reading "+families_tsv_file.name+" the gene families file ...")
 
@@ -241,11 +241,9 @@ class PPanGGOLiN:
             families[gene_id]          = fam_id
             if is_frag == "F":
                 self.CDS_fragments[gene_id] = fam_id
-
         self.circular_contig_size = {}
         logging.getLogger().info("Reading "+organisms_file.name+" the list of organism files ...")
         bar = tqdm(organisms_file,total=get_num_lines(organisms_file), unit = "gff file")
-
         for line in bar:
             elements = [el.strip() for el in line.split("\t")]
             if len(elements)<=1:
@@ -1287,6 +1285,89 @@ class PPanGGOLiN:
                 
         return select_organisms
 
+    def get_representative_genomes(self,
+                                   select_organisms = None,
+                                   seed             = 42,
+                                   nb_threads=1):
+        if select_organisms is None:
+            select_organisms = self.organisms
+        else:
+            select_organisms = OrderedSet(select_organisms)
+            if len(select_organisms - self.organisms)>0:
+                raise Exception("select_organisms parameter must be included in the organisms attribute of the objet")
+            if inplace:
+                raise Exception("inplace can't be true if the select_organisms parameter has not the same size than organisms attribute")
+        
+        data        = []
+        all_indexes = []
+        node_names = []
+        all_columns = []
+        cpt_col=-1
+        index_org = {org:i for i, org in enumerate(select_organisms)}
+
+        stats = defaultdict(int)
+
+        for node_name, node_organisms in self.neighbors_graph.nodes(data=True):
+            new_ind = [index_org[org] for org in node_organisms if org in select_organisms]
+            if len(new_ind):
+                cpt_col+=1
+                node_names.append(node_name)
+                all_indexes.extend(new_ind)
+                all_columns.extend([cpt_col]*len(new_ind))
+                data.extend([True]*len(new_ind))
+        import pandas as pd
+        mat_p_a = csr_matrix((data, (all_indexes,all_columns)), shape = (len(select_organisms),cpt_col+1), dtype=numpy.bool_)
+        
+        from scipy.spatial.distance import euclidean, jaccard
+        #res = Birch(branching_factor=100, n_clusters=None, threshold=0.01, copy=False).fit(mat_p_a)
+        #res.predict(mat_p_a)
+        res=DBSCAN(eps=0.01, min_samples=2, metric="cosine",n_jobs=nb_threads).fit(mat_p_a)
+        #res=AffinityPropagation(affinity='euclidean', convergence_iter=15, copy=False, damping=0.5, max_iter=200, preference=None, verbose=False).fit(mat_p_a)
+        #pdb.set_trace()
+        cluster_of_genomes = defaultdict(list)
+        cluster_of_genomes_representatives ={}
+        print(Counter(res.labels_))
+        from sklearn.metrics.pairwise import cosine_distances
+        for cluster_label, org_ind in zip(res.labels_,range(0,len(select_organisms))):
+            if cluster_label != -1:
+                cluster_of_genomes[cluster_label].append(org_ind)
+            else:
+                cluster_of_genomes_representatives[-org_ind]=org_ind
+        for cluster_label in cluster_of_genomes.keys():
+            if len(cluster_of_genomes[cluster_label])>1:
+                sub_mat_p_a=mat_p_a[cluster_of_genomes[cluster_label]]
+                mean_vector = sub_mat_p_a.mean(0)
+                min_dist = 1
+                closest_to_mean=0
+                for org_ind in cluster_of_genomes[cluster_label]:
+                    d = cosine_distances(mat_p_a[org_ind].todense(), mean_vector)
+                    if d<min_dist:
+                        min_dist=d
+                        closest_to_mean=org_ind
+                cluster_of_genomes_representatives[cluster_label]=closest_to_mean
+        print("\n".join(select_organisms[cluster_of_genomes_representatives.values()]))
+        #mat_p_a=mat_p_a[to_keep]
+        #mat_p_a = mat_p_a.T
+        #mat_p_a = pd.DataFrame.sparse.from_spmatrix(csc_matrix((data, (all_indexes,all_columns)), shape = (len(select_organisms),cpt_col+1), dtype=numpy.bool_),index=select_organisms,columns=node_names)
+        #res = SpectralClustering(n_clusters=Q,assign_labels="discretize",random_state=0).fit(mat_p_a)
+        #res = MiniBatchKMeans(n_clusters=Q).fit(mat_p_a)
+        #res = DBSCAN(algorithm='auto', eps=10, leaf_size=30, metric='l1',  metric_params=None, min_samples=2, n_jobs=None, p=None).fit(mat_p_a)
+        #res = Birch(branching_factor=100, n_clusters=Q, threshold=1).fit(mat_p_a)
+        #res.predict(mat_p_a)
+        #print(Counter(res.subcluster_labels_))
+        #counts = Counter(res.labels_)
+        #densities = defaultdict(float)
+        #for partition, nb_fam in counts.items():
+        #    densities[partition] = mat_p_a[res.labels_==partition].sum()/nb_fam
+        #partitions=sorted(densities.items(), key=lambda kv: kv[1], reverse=True)
+        #stats["persistent"]=counts[partitions[0][0]]
+        #stats["shell"]=counts[partitions[1][0]]
+        #stats["cloud"]=counts[partitions[2][0]]
+        #stats["undefined"]=0
+        #stats["Q"]=3
+        #print(stats)
+        return(select_organisms[cluster_of_genomes_representatives.values()])
+
     def partition(self, nem_dir_path     = tempfile.mkdtemp(),
                         old_nem_dir      = None,
                         select_organisms = None,
@@ -1454,7 +1535,7 @@ class PPanGGOLiN:
             
             org_nb_sample = Counter()
             for org in select_organisms:
-                    org_nb_sample[org] = 0
+                org_nb_sample[org] = 0
             condition = len(select_organisms)/chunck_size
             while len(validated) < pan_size:
                 
@@ -1477,7 +1558,6 @@ class PPanGGOLiN:
                     args.append(( nem_dir_path + "/" + str(cpt) + "/", len(samp), beta*(nb_fam / edges_weight), free_dispersion, Q, seed, init, keep_temp_files))
                     bar.update() if inplace else None
                     cpt += 1
-                
                 if inplace:
                     bar.close()
                     logging.getLogger().info("Launching NEM")
@@ -1493,7 +1573,7 @@ class PPanGGOLiN:
                     condition +=1#if len(validated) < pan_size, we will want to resample more.
 
             for fam, data in cpt_partition.items():
-                partitionning_results[fam]=max(data, key=data.get)
+                partitionning_results[fam] = max(data, key=data.get)
 
             partitionning_results = [partitionning_results,[]]
             
@@ -2234,7 +2314,7 @@ class PPanGGOLiN:
         """
             generate tile plot representation
             :param outdir: a str containing the path of the output file
-            :param outdir: a bool specifying if only the persistent and shell genome is plotted or all the pangenome
+            :param shell_persistent_only: a bool specifying if only the persistent and shell genome is plotted or all the pangenome
             :type str: 
         """ 
         data        = []
@@ -2477,7 +2557,7 @@ class PPanGGOLiN:
                  duplications        = {node : [len(data[org]) for org in (set(data) & set(organisms_to_project))] for node, data in self.neighbors_graph.subgraph(self.partitions["persistent"]).nodes(data=True)}
                  mean_duplication    = {node : mean(occurences) for node, occurences in duplications.items()}
                  single_copy_markers = {node : value for node, value in mean_duplication.items() if value < 1+duplication_margin}
-            single_copy_markers = None if len(single_copy_markers) == 0 else single_copy_markers 
+            single_copy_markers = None if single_copy_markers is not None and len(single_copy_markers) == 0 else single_copy_markers
             with open(out_dir+"/nb_genes.csv","w") as nb_genes_file:
                 nb_genes_file.write(sep.join(["org","nb_persistent_families","nb_shell_families","nb_cloud_families","nb_exact_core_families","nb_exact_accessory_families","nb_soft_core_families","nb_soft_accessory_families","nb_gene_families","nb_persistent_genes","nb_shell_genes","nb_cloud_genes","nb_exact_core_genes","nb_exact_accessory_genes","nb_soft_core_genes","nb_soft_core_genes","nb_pangenome_genes","completeness","strain_contamination","nb_single_copy_markers"])+"\n")
                 for organism in organisms_to_project:
@@ -2534,7 +2614,7 @@ class PPanGGOLiN:
                                                   str(nb_genes_by_partition["soft_core"]),
                                                   str(nb_genes_by_partition["soft_accessory"]),
                                                   str(nb_genes_by_partition["pangenome"]),
-                                                  str(round(nb_genes_families_by_partition["persistent"]/len(self.partitions["persistent"])*100,4)),
+                                                  str(round(nb_genes_families_by_partition["persistent"]/len(self.partitions["persistent"])*100,4) if len(self.partitions["persistent"])>0 else "NA"),
                                                   str(round(len(contamination)/len(single_copy_markers)*100,4)) if single_copy_markers is not None else "NA",
                                                   str(len(single_copy_markers)) if single_copy_markers is not None else "0"])+"\n")
             
