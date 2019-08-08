@@ -304,7 +304,7 @@ def resample(index):
                           keep_temp_files  = options.keep_nem_temporary_files,
                           seed             = options.seed[0])
     if not options.keep_nem_temporary_files:
-        shutil.rmtree(nem_dir_path)
+      shutil.rmtree(nem_dir_path)
     evol.write(",".join([str(len(shuffled_comb[index])),
                           str(stats["persistent"]) if stats["undefined"] == 0 else "NA",
                           str(stats["shell"]) if stats["undefined"] == 0 else "NA",
@@ -567,9 +567,6 @@ def __main__():
     logging.getLogger().info("Output directory is: "+OUTPUTDIR)
     logging.getLogger().info("Temporary directory is: "+TMP_DIR)
 
-
-
-
     if FORMER_NEM:
         if not os.path.isdir(FORMER_NEM):
             raise FileNotFoundError(" Directory provided for old NEM results ('" + FORMER_NEM + "') does not exist.")
@@ -734,6 +731,13 @@ def __main__():
 
     if not options.just_evolution:
         start_partitioning = time()
+        # representative_genomes = set(pan.get_representative_genomes())
+        # with open("representative_genomes.list","w") as rep_genomes:
+        #     for line in options.organisms[0]:
+        #         elements = line.split("\t")
+        #         if elements[0] in representative_genomes:
+        #             rep_genomes.writelines(line)
+        # exit()
         pan.partition(nem_dir_path    = TMP_DIR+NEM_DIR,
                       old_nem_dir     = FORMER_NEM,
                       Q               = options.number_of_partitions[0],
@@ -795,19 +799,16 @@ def __main__():
         logging.getLogger().info("Extract and label paths")
         start_paths = time()
         correlated_path_groups, correlated_paths = pan.extract_shell_paths()
-        
-
         with open(OUTPUTDIR+"/"+PATH_DIR+"/"+CORRELATED_PATHS_PREFIX+"_vectors.csv","w") as correlated_paths_vectors, open(OUTPUTDIR+"/"+PATH_DIR+"/"+CORRELATED_PATHS_PREFIX+"_confidences.csv","w") as correlated_paths_confidences:
-            header = []
-            for i, (path, vector) in enumerate(correlated_paths.items()):
-                if i==0:
-                    header = list(pan.organisms)
-                    correlated_paths_vectors.write(",".join(["Gene","Non-unique Gene name","Annotation","No. isolates","No. sequences","Avg sequences per isolate","Accessory Fragment","Genome Fragment","Order within Fragment","Accessory Order with Fragment","QC","Min group size nuc","Max group size nuc","Avg group size nuc"]+header)+"\n")
-                    correlated_paths_confidences.write(",".join(["correlated_paths"]+header)+"\n")
-                binary_vector = [int(round(v)) for v in vector]
-                correlated_paths_vectors.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in binary_vector])+("\n" if i < len(correlated_paths)-1 else ""))
-                correlated_paths_confidences.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in vector])+("\n" if i < len(correlated_paths)-1 else ""))
-
+           header = []
+           for i, (path, vector) in enumerate(correlated_paths.items()):
+               if i==0:
+                   header = list(pan.organisms)
+                   correlated_paths_vectors.write(",".join(["Gene","Non-unique Gene name","Annotation","No. isolates","No. sequences","Avg sequences per isolate","Accessory Fragment","Genome Fragment","Order within Fragment","Accessory Order with Fragment","QC","Min group size nuc","Max group size nuc","Avg group size nuc"]+header)+"\n")
+                   correlated_paths_confidences.write(",".join(["correlated_paths"]+header)+"\n")
+               binary_vector = [int(round(v)) for v in vector]
+               correlated_paths_vectors.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in binary_vector])+("\n" if i < len(correlated_paths)-1 else ""))
+               correlated_paths_confidences.write(",".join([path]+["","",str(sum(binary_vector)),str(sum(binary_vector)),"","","","","","","","",""]+[str(v) for v in vector])+("\n" if i < len(correlated_paths)-1 else ""))
         if options.metadata[0]:
             for col in tqdm(metadata.columns,total=metadata.shape[1], unit = "variable"):
                 results=None
@@ -902,7 +903,7 @@ def __main__():
         start_plots = time()
         pan.ushaped_plot(OUTPUTDIR+FIGURE_DIR+"/"+USHAPE_PLOT_PREFIX)
         if pan.nb_organisms > 500:
-            logging.getLogger().warning("Too mush organisms (>1000) to display the tile plot using plot.ly, please use the Rscript to draw a static version of the tile plot")
+            logging.getLogger().warning("Too mush organisms (>500) to display the tile plot using plot.ly, please use the Rscript to draw a static version of the tile plot")
         elif pan.nb_organisms <= 1:
             logging.getLogger().warning("Not enough organisms (1) to display a tile plot.")
         else:
