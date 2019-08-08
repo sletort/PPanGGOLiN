@@ -25,8 +25,7 @@ from multiprocessing import Pool#, Semaphore
 from nem_stats import *
 from .utils import *
 import pdb
-from fa2 import ForceAtlas2
-import plotly.plotly as py
+from fa2 import forceatlas2
 import plotly.offline as out_plotly
 import plotly.graph_objs as go
 #import plotly.figure_factory as ff
@@ -238,7 +237,7 @@ class PPanGGOLiN:
                 logging.getLogger().error("No tabulation separator found in gene families file")
                 exit(1)
             (fam_id, gene_id, is_frag) = elements if len(elements) == 3 else elements+[None]
-            families[gene_id]          = fam_id
+            families[gene_id]          = sys.intern(fam_id)
             if is_frag == "F":
                 self.CDS_fragments[gene_id] = fam_id
         self.circular_contig_size = {}
@@ -695,7 +694,7 @@ class PPanGGOLiN:
                 for i, element in enumerate(seed_path):
                     
                         if element in separation_tree:
-                            print(element)
+                            #print(element)
                             for child in separation_tree[element]:
                                 new_seed_path = list(seed_path)
                                 new_seed_path[i]=child
@@ -716,7 +715,7 @@ class PPanGGOLiN:
                             #absolute_orientation(path)# give an absolute orientation
                             all_path_k_p_1.add(absolute_orientation(path))
                     except nx.exception.NetworkXError as e:
-                        print(path)
+                        #print(path)
                         all_path_k.extendleft(update_seed_path(p))
                         continue
             return(all_path_k_p_1)
@@ -1084,7 +1083,7 @@ class PPanGGOLiN:
                         nei_file.write(str(index_fam[node_name])+"\t0\n")
                         logging.getLogger().debug("The family: "+node_name+" has a too high degree or is an isolated family in the selected organisms")
                 except nx.exception.NetworkXError as nxe:
-                    print(nxe)
+                    #print(nxe)
                     logging.getLogger().debug("The family: "+node_name+" is an isolated family")
                     nei_file.write(str(index_fam[node_name])+"\t0\n")
             str_file.write("S\t"+str(len(index_fam))+"\t"+
@@ -1580,6 +1579,7 @@ class PPanGGOLiN:
             logging.getLogger().info(f"Did {cpt} partitionning with chunks of size {chunck_size} among {len(select_organisms)} genomes in {round(time() - start_partitionning,2)} seconds.") if inplace else None
         else:
             Q, edges_weight, BICs, ICLs, LLs  = run_evaluate_nb_partitions(select_organisms,Q)
+            #print("info, beta="+str(beta)+" F="+str((stats["exact_accessory"]+stats["exact_core"]))+" edges_weight="+str(edges_weight))
             logging.getLogger().info("Partitioning...") if inplace else None
 
             partitionning_results = run_partitioning(nem_dir_path, len(select_organisms), beta * ((stats["exact_accessory"]+stats["exact_core"])/edges_weight), free_dispersion, Q = Q, seed = seed, init = init)# 
@@ -2348,6 +2348,7 @@ class PPanGGOLiN:
         ordored_nodes_c = sorted(self.partitions["cloud"], key=lambda n:len(graph.nodes[n]), reverse=True)
         sep_p = len(ordored_nodes_p)-0.5
         separators = [sep_p]
+        shell_NA = None
         if len(self.subpartitions_shell)==1:
             ordored_nodes_s = sorted(self.partitions["shell"], key=lambda n:len(graph.nodes[n]), reverse=True)
             ordered_nodes = ordored_nodes_p+ordored_nodes_s+ordored_nodes_c
@@ -2356,7 +2357,8 @@ class PPanGGOLiN:
         else:
             ordered_nodes = ordored_nodes_p
             for subpartition in sorted(self.subpartitions_shell.keys()):
-
+                if subpartition=="S_":
+                    shell_NA=len(separators)-1
                 ordored_nodes_s = sorted(self.subpartitions_shell[subpartition], key=lambda n:len(graph.nodes[n]), reverse=True)
                 ordered_nodes+= ordored_nodes_s
                 separators.append(separators[len(separators)-1]+len(ordored_nodes_s))
@@ -2392,7 +2394,10 @@ class PPanGGOLiN:
                                                    ticks     = 'outside'))
         shell_color=None
         if len(self.subpartitions_shell)>1:
-            shell_color = cl.interp(cl.flipper()['seq']['9']['Greens'][1:7],self.Q-2)
+            if "S_" not in self.subpartitions_shell:
+                shell_color = cl.interp(cl.flipper()['seq']['9']['Greens'][1:7],len(self.subpartitions_shell))
+            else:
+                shell_color = cl.interp(cl.flipper()['seq']['9']['Greens'][1:7],len(self.subpartitions_shell)-1)
         shapes = []
         sep_prec=0
         for nb, sep in enumerate(separators):
@@ -2402,7 +2407,10 @@ class PPanGGOLiN:
             elif nb==(len(separators)-1):
                 color=COLORS["cloud"]
             elif len(self.subpartitions_shell)>1:
-                color=shell_color[nb-1]
+                if shell_NA is not None and nb==shell_NA:
+                    color=COLORS["shell"]
+                else:
+                    color=shell_color.pop()
             else:
                 color=COLORS["shell"]
             shapes.append(dict(type='line', x0=-1, x1=-1, y0=sep_prec, y1=sep, line = dict(dict(width=10, color=color))))
@@ -2733,6 +2741,7 @@ def run_partitioning(nem_dir_path, nb_org, beta, free_dispersion, Q = 3, seed = 
         nem_dir_path.encode('ascii')+b"/nem_file_init_"+str(Q).encode('ascii')+b".m",
         nem_dir_path.encode('ascii')+b"/nem_file_"+str(Q).encode('ascii'),
         seed])
+    #print("beta="+str(beta))
     nem(Fname           = nem_dir_path.encode('ascii')+b"/nem_file",
         nk              = Q,
         algo            = ALGO,

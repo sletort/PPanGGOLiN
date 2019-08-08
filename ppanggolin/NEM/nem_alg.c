@@ -1479,7 +1479,8 @@ static void StartLogFile( const char* LogName, int Npt, FILE** FlogP )
   float mult; 
 
         if ( ( (*FlogP) = fopen( LogName, "w" ) ) == NULL )
-        {
+        { 
+            setbuf(FlogP, NULL);
             fprintf( out_stderr, "Could not open file '%s' in write mode\n", 
                      LogName ) ;
         }
