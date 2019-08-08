@@ -2280,7 +2280,7 @@ static StatusET ComputePkFkiM
         for ( i = 0 ; i < npt ; i ++ )
         {
             double fki ;
-	    float  logfki ;
+	          float  logfki ;
 
             fCompuDens( DataP->NbVars, k, ParaP, 
                         & (DataP->PointsM[ i * DataP->NbVars ]) ,
