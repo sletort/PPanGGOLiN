@@ -14,10 +14,11 @@ install:
   - conda config --add channels bioconda
   - conda config --add channels conda-forge
 
-  - conda uninstall setuptools
+  - conda update -n base -c defaults conda
+  # - conda uninstall setuptools
   # This is a must to make it works
-  - conda install setuptools
-  - conda update -q --force conda
+  # - conda install setuptools
+  # - conda update -q --force conda
 
   # Useful for debugging any issues with conda
   - conda info -a
