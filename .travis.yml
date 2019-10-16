@@ -14,7 +14,7 @@ install:
   - conda config --add channels bioconda
   - conda config --add channels conda-forge
 
-  - conda update -n base -c defaults conda
+  # - conda update -n base -c defaults conda
   # - conda uninstall setuptools
   # This is a must to make it works
   # - conda install setuptools
