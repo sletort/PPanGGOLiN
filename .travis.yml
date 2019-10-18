@@ -26,8 +26,9 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest
   - conda activate test-environment
   - conda install -n test-environment --file requirements.txt
-  - which pytest
-  - which pytest-3
 
 script:
-  - pytest-3
+  - which pytest
+  - conda activate test-environment
+  - which pytest
+  - pytest
