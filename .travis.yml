@@ -29,6 +29,4 @@ install:
 
 script:
   - which pytest
-  - conda activate test-environment
-  - which pytest
   - pytest
