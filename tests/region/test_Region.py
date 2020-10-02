@@ -62,6 +62,7 @@ def test_append__error(o_region):
     with pytest.raises(TypeError):
         o_region.append(42)
 
+@pytest.mark.dbg
 def test_properties(l_genes, o_region, o_org, o_contig):
     s_families = set()
     for gene in l_genes:
@@ -76,6 +77,12 @@ def test_properties(l_genes, o_region, o_org, o_contig):
     assert o_region.contig == o_contig
     assert o_region.organism == o_org
     assert o_region.families == s_families
+
+    # remove a gene => the whole contig is not in the Region
+    o_region.genes.pop()
+    print([str(x) for x in o_region.genes])
+    assert o_region.isWholeContig is False
+    assert o_region.isContigBorder is False
 
 def test_getRNAs(o_rna, o_region, l_genes):
     for gene in l_genes:
